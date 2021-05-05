@@ -5,7 +5,7 @@ from flask_debugtoolbar import DebugToolbarExtension
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy import or_
 
-from forms import UserAddForm, LoginForm, MessageForm, ProfileEditForm
+from forms import UserAddForm, LoginForm, MessageForm, ProfileEditForm, LogoutForm
 from models import db, connect_db, User, Message
 
 CURR_USER_KEY = "curr_user"
@@ -39,6 +39,12 @@ def add_user_to_g():
 
     else:
         g.user = None
+
+
+@app.before_request
+def add_logout_form_to_g():
+    if CURR_USER_KEY in session:
+        g.logout_form = LogoutForm()
 
 
 def do_login(user):
@@ -110,22 +116,22 @@ def login():
     return render_template('users/login.html', form=form)
 
 
-@app.route('/logout')
+@app.route('/logout', methods=["POST"])
 def logout():
     """Handle logout of user."""
-
     # IMPLEMENT THIS
     if not g.user:
         flash("Access unauthorized.", "danger")
         return redirect("/")
 
-    session.pop(CURR_USER_KEY)
-    flash("Woohoo you logged out")
-    return redirect('/login')
-
+    if g.logout_form.validate_on_submit():
+        do_logout()
+        flash("Woohoo you logged out", "success")
+        return redirect('/login')
 
 ##############################################################################
 # General user routes:
+
 
 @app.route('/users')
 def list_users():
@@ -216,17 +222,28 @@ def profile():
         return redirect("/")
 
     form = ProfileEditForm(obj=g.user)
+    
+    if not User.authenticate(g.user.username, form.password.data):
+        flash("Wrong password, try again", "danger")
 
-    if form.validate_on_submit() and User.authenticate(g.user.username, form.password.data):
+    if (form.validate_on_submit() and
+       User.authenticate(g.user.username, form.password.data)):
         g.user.username = form.username.data
         g.user.email = form.email.data
-        g.user.image_url = form.image_url.data
-        g.user.header_image_url = form.header_image_url.data
+        if not form.image_url.data:
+            g.user.image_url = "/static/images/default-pic.png"
+        else:
+            g.user.image_url = form.image_url.data
+        if not form.header_image_url.data:
+            g.user.header_image_url = "/static/images/warbler-hero.jpg"
+        else:
+            g.user.header_image_url = form.header_image_url.data
+
         g.user.bio = form.bio.data
         g.user.location = form.location.data
         db.session.commit()
         return redirect(f"/users/{g.user.id}")
-
+# TODO ask about default images
     return render_template("users/edit.html", form=form)
 
 
@@ -307,14 +324,12 @@ def homepage():
     - logged in: 100 most recent messages of followed_users
     """
     # get all the followers from user, then display their messages
-    users_following = g.user.following
-
-    following_ids = [following.id for following in users_following]
-    print("following ids", following_ids)
-
-    # g.user.id == Message.user_id 
 
     if g.user:
+        users_following = g.user.following
+
+        following_ids = [following.id for following in users_following]
+        # print("following ids", following_ids)
         messages = (Message
                     .query
                     .filter(or_(Message.user_id.in_(following_ids), g.user.id == Message.user_id))

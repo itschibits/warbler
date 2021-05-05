@@ -35,3 +35,7 @@ class ProfileEditForm(FlaskForm):
     header_image_url = StringField('(Optional) Header Image URL')
     bio = TextAreaField('(Optional) User Bio')
     password = PasswordField('Enter Your Password', validators=[Length(min=6)])
+
+
+class LogoutForm(FlaskForm):
+    """Protected Logout, purposefully blank"""

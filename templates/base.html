@@ -57,7 +57,18 @@
           </a>
         </li>
         <li><a href="/messages/new">New Message</a></li>
-        <li><a href="/logout">Log out</a></li>
+        <form action="/logout" method="POST" id="logout_form">
+          {{ g.logout_form.hidden_tag() }}
+  
+          {% for field in g.logout_form if field.widget.input_type != 'hidden' %}
+            {% for error in field.errors %}
+              <span class="text-danger">{{ error }}</span>
+            {% endfor %}
+            {{ field(placeholder=field.label.text, class="form-control") }}
+          {% endfor %}
+  
+          <button class="btn btn-primary btn-block">Log Out</button>
+        </form>
       {% endif %}
 
     </ul>
