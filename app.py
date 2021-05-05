@@ -114,6 +114,13 @@ def logout():
     """Handle logout of user."""
 
     # IMPLEMENT THIS
+    if not g.user:
+        flash("Access unauthorized.", "danger")
+        return redirect("/")
+
+    session.pop(CURR_USER_KEY)
+    flash("Woohoo you logged out")
+    return redirect('/login')
 
 
 ##############################################################################
@@ -172,11 +179,10 @@ def users_followers(user_id):
 @app.route('/users/follow/<int:follow_id>', methods=['POST'])
 def add_follow(follow_id):
     """Add a follow for the currently-logged-in user."""
-
     if not g.user:
         flash("Access unauthorized.", "danger")
         return redirect("/")
-
+    breakpoint()
     followed_user = User.query.get_or_404(follow_id)
     g.user.following.append(followed_user)
     db.session.commit()
