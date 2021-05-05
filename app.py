@@ -3,6 +3,7 @@ import os
 from flask import Flask, render_template, request, flash, redirect, session, g
 from flask_debugtoolbar import DebugToolbarExtension
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy import or_
 
 from forms import UserAddForm, LoginForm, MessageForm, ProfileEditForm
 from models import db, connect_db, User, Message
@@ -305,14 +306,22 @@ def homepage():
     - anon users: no messages
     - logged in: 100 most recent messages of followed_users
     """
+    # get all the followers from user, then display their messages
+    users_following = g.user.following
+
+    following_ids = [following.id for following in users_following]
+    print("following ids", following_ids)
+
+    # g.user.id == Message.user_id 
 
     if g.user:
         messages = (Message
                     .query
+                    .filter(or_(Message.user_id.in_(following_ids), g.user.id == Message.user_id))
                     .order_by(Message.timestamp.desc())
                     .limit(100)
                     .all())
-
+        # print("messages", messages)
         return render_template('home.html', messages=messages)
 
     else:
