@@ -5,52 +5,45 @@
   <meta charset="UTF-8">
   <title>Warbler</title>
 
-  <link rel="stylesheet"
-        href="https://unpkg.com/bootstrap/dist/css/bootstrap.css">
+  <link rel="stylesheet" href="https://unpkg.com/bootstrap/dist/css/bootstrap.css">
   <script src="https://unpkg.com/jquery"></script>
   <script src="https://unpkg.com/popper"></script>
   <script src="https://unpkg.com/bootstrap"></script>
 
-  <link rel="stylesheet"
-        href="https://use.fontawesome.com/releases/v5.3.1/css/all.css">
+  <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.3.1/css/all.css">
   <link rel="stylesheet" href="/static/stylesheets/style.css">
   <link rel="shortcut icon" href="/static/favicon.ico">
 </head>
 
 <body class="{% block body_class %}{% endblock %}">
 
-<nav class="navbar navbar-expand">
-  <div class="container-fluid">
+  <nav class="navbar navbar-expand">
+    <div class="container-fluid">
 
-    <div class="navbar-header">
-      <a href="/" class="navbar-brand">
-        <img src="/static/images/warbler-logo.png" alt="logo">
-        <span>Warbler</span>
-      </a>
-    </div>
+      <div class="navbar-header">
+        <a href="/" class="navbar-brand">
+          <img src="/static/images/warbler-logo.png" alt="logo">
+          <span>Warbler</span>
+        </a>
+      </div>
 
-    <ul class="nav navbar-nav navbar-right">
+      <ul class="nav navbar-nav navbar-right">
 
-      {% block searchbox %}
+        {% block searchbox %}
         <li>
           <form class="navbar-form navbar-right" action="/users">
-            <input
-                name="q"
-                class="form-control"
-                placeholder="Search Warbler"
-                aria-label="Search"
-                id="search">
+            <input name="q" class="form-control" placeholder="Search Warbler" aria-label="Search" id="search">
             <button class="btn btn-default">
               <span class="fa fa-search"></span>
             </button>
           </form>
         </li>
-      {% endblock %}
+        {% endblock %}
 
-      {% if not g.user %}
+        {% if not g.user %}
         <li><a href="/signup">Sign up</a></li>
         <li><a href="/login">Log in</a></li>
-      {% else %}
+        {% else %}
         <li>
           <a href="/users/{{ g.user.id }}">
             <img src="{{ g.user.image_url }}" alt="{{ g.user.username }}">
@@ -59,31 +52,32 @@
         <li><a href="/messages/new">New Message</a></li>
         <form action="/logout" method="POST" id="logout_form">
           {{ g.logout_form.hidden_tag() }}
-  
+
           {% for field in g.logout_form if field.widget.input_type != 'hidden' %}
-            {% for error in field.errors %}
-              <span class="text-danger">{{ error }}</span>
-            {% endfor %}
-            {{ field(placeholder=field.label.text, class="form-control") }}
+          {% for error in field.errors %}
+          <span class="text-danger">{{ error }}</span>
           {% endfor %}
-  
+          {{ field(placeholder=field.label.text, class="form-control") }}
+          {% endfor %}
+
           <button class="btn btn-primary btn-block">Log Out</button>
         </form>
-      {% endif %}
+        {% endif %}
 
-    </ul>
-  </div>
-</nav>
+      </ul>
+    </div>
+  </nav>
 
-<div class="container">
+  <div class="container">
 
-  {% for category, message in get_flashed_messages(with_categories=True) %}
+    {% for category, message in get_flashed_messages(with_categories=True) %}
     <div class="alert alert-{{ category }}">{{ message }}</div>
-  {% endfor %}
+    {% endfor %}
 
-  {% block content %}
-  {% endblock %}
+    {% block content %}
+    {% endblock %}
 
-</div>
+  </div>
 </body>
+
 </html>

@@ -39,3 +39,7 @@ class ProfileEditForm(FlaskForm):
 
 class LogoutForm(FlaskForm):
     """Protected Logout, purposefully blank"""
+
+
+class LikeForm(FlaskForm):
+    """Protected Logout, purposefully blank"""

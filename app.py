@@ -311,6 +311,23 @@ def messages_destroy(message_id):
 
     return redirect(f"/users/{g.user.id}")
 
+##############################################################################
+#Route for Likes 
+
+@app.route('/users/<int:user_id>/likes')
+def show_like_page(user_id):
+    """show liked messages from a user"""
+    if not g.user:
+        flash("Access unauthorized.", "danger")
+        return redirect("/")
+
+    liked_messages = g.user.likes
+    return render_template('home.html', messages=liked_messages)
+
+
+
+
+
 
 ##############################################################################
 # Homepage and error pages
