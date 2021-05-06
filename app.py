@@ -154,10 +154,13 @@ def list_users():
 @app.route('/users/<int:user_id>')
 def users_show(user_id):
     """Show user profile."""
-
+    form = LikeForm()
     user = User.query.get_or_404(user_id)
+    messages = user.messages
+    likes = Like.query.filter(Like.user_id == g.user.id).all()
+    like_message_ids = [like.message_id for like in likes]
 
-    return render_template('users/show.html', user=user)
+    return render_template('users/show.html', user=user, messages=messages, form=form, like_message_ids=like_message_ids)
 
 
 @app.route('/users/<int:user_id>/following')
@@ -293,9 +296,11 @@ def messages_add():
 @app.route('/messages/<int:message_id>', methods=["GET"])
 def messages_show(message_id):
     """Show a message."""
-
-    msg = Message.query.get(message_id)
-    return render_template('messages/show.html', message=msg)
+    form = LikeForm()
+    message = Message.query.get(message_id)
+    likes = Like.query.filter(Like.user_id == g.user.id).all()
+    like_message_ids = [like.message_id for like in likes]
+    return render_template('messages/show.html', message=message, like_message_ids=like_message_ids, form=form)
 
 
 @app.route('/messages/<int:message_id>/delete', methods=["POST"])
@@ -316,7 +321,7 @@ def messages_destroy(message_id):
 @app.route('/messages/<int:message_id>/like', methods=["POST"])
 def like_unlike_message(message_id):
     """Handle liking/unliking a message"""
-    flash('like button clicked')
+    # flash('like button clicked')
     if not g.user:
         flash("Access unauthorized.", "danger")
         return redirect("/")
@@ -333,7 +338,7 @@ def like_unlike_message(message_id):
         print('ardvark:', like)
         db.session.delete(like)
         db.session.commit()
-    flash('like button clicked')
+    # flash('like button clicked')
     return redirect(request.referrer)
 
 ##############################################################################
@@ -344,12 +349,13 @@ def like_unlike_message(message_id):
 def show_like_page(user_id):
     """show liked messages from a user"""
     if not g.user:
-        form = LikeForm()
         flash("Access unauthorized.", "danger")
         return redirect("/")
-
+    likes = Like.query.filter(Like.user_id == g.user.id).all()
+    like_message_ids = [like.message_id for like in likes]
+    form = LikeForm()
     liked_messages = g.user.likes
-    return render_template('home.html', messages=liked_messages, form=form)
+    return render_template('home.html', messages=liked_messages, form=form, like_message_ids=like_message_ids)
 
 
 

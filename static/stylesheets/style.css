@@ -388,6 +388,7 @@ p.card-bio {
 .like_button {
   position: relative;
   z-index: 1;
+  border-style: none;
 }
 
 

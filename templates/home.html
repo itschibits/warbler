@@ -63,16 +63,16 @@
 
           {% for field in form if field.widget.input_type != 'hidden' %}
           {% for error in field.errors %}
-          <span class="text-danger">{{ error }}</span>
+            <span class="text-danger">{{ error }}</span>
           {% endfor %}
           {{ field(placeholder=field.label.text, class="form-control") }}
           {% endfor %}
 
-
-          {% if msg.id in like_message_ids %}
-          <button type="submit"><i class="fas fa-heart like_button"></i></button>
+          {% if g.user.id == msg.user_id %}
+          {% elif msg.id in like_message_ids %}
+            <button type="submit" class="btn btn-primary"><i class="fas fa-heart like_button"></i></button>
           {% else %}
-          <button type="submit"><i class="far fa-heart like_button"></i></button>
+            <button type="submit" class="btn btn-primary"><i class="far fa-heart like_button"></i></button>
           {% endif %}
         </form>
         {% endif %}
