@@ -5,7 +5,8 @@ from flask_debugtoolbar import DebugToolbarExtension
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy import or_
 
-from forms import UserAddForm, LoginForm, MessageForm, ProfileEditForm, LogoutForm
+from forms import UserAddForm, LoginForm, MessageForm, ProfileEditForm
+from forms import LogoutForm, LikeForm
 from models import db, connect_db, User, Message, Like
 
 CURR_USER_KEY = "curr_user"
@@ -311,24 +312,29 @@ def messages_destroy(message_id):
 
     return redirect(f"/users/{g.user.id}")
 
+
 @app.route('/messages/<int:message_id>/like', methods=["POST"])
 def like_unlike_message(message_id):
     """Handle liking/unliking a message"""
+    flash('like button clicked')
     if not g.user:
         flash("Access unauthorized.", "danger")
         return redirect("/")
 
     msg = Message.query.get(message_id)
-    msg_like_by_ids = [user.id for user in msg.like_by]
-    if g.user.id not in msg_like_by_ids:
+    user_ids_who_like_message = [user.id for user in msg.like_by]
+
+    if g.user.id not in user_ids_who_like_message:
         like = Like(user_id=g.user.id, message_id=message_id)
         db.session.add(like)
         db.session.commit()
     else:
-        like = Like.query.filter(Like.user_id == g.user.id, Like.message_id == message_id)
+        like = Like.query.filter(Like.message_id == message_id, Like.user_id == g.user.id).one()
+        print('ardvark:', like)
         db.session.delete(like)
         db.session.commit()
-    return redirect()
+    flash('like button clicked')
+    return redirect(request.referrer)
 
 ##############################################################################
 # Route for Likes
@@ -338,11 +344,12 @@ def like_unlike_message(message_id):
 def show_like_page(user_id):
     """show liked messages from a user"""
     if not g.user:
+        form = LikeForm()
         flash("Access unauthorized.", "danger")
         return redirect("/")
 
     liked_messages = g.user.likes
-    return render_template('home.html', messages=liked_messages)
+    return render_template('home.html', messages=liked_messages, form=form)
 
 
 
@@ -364,7 +371,7 @@ def homepage():
 
     if g.user:
         users_following = g.user.following
-
+        form = LikeForm()
         following_ids = [following.id for following in users_following]
         # print("following ids", following_ids)
         messages = (Message
@@ -374,7 +381,11 @@ def homepage():
                     .limit(100)
                     .all())
         # print("messages", messages)
-        return render_template('home.html', messages=messages)
+        likes = Like.query.filter(Like.user_id == g.user.id).all()
+        like_message_ids = [like.message_id for like in likes]
+        #msg.id == like.mesage_id
+
+        return render_template('home.html', messages=messages, form=form, like_message_ids=like_message_ids)
 
     else:
         return render_template('home-anon.html')

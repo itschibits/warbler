@@ -383,6 +383,14 @@ p.card-bio {
   margin: 2em 10px 0;
 }
 
+/* ============================ Likes */
+
+.like_button {
+  position: relative;
+  z-index: 1;
+}
+
+
 /* ============================ Signed out home */
 
 .home-hero {
