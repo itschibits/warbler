@@ -6,7 +6,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy import or_
 
 from forms import UserAddForm, LoginForm, MessageForm, ProfileEditForm, LogoutForm
-from models import db, connect_db, User, Message
+from models import db, connect_db, User, Message, Like
 
 CURR_USER_KEY = "curr_user"
 
@@ -222,7 +222,7 @@ def profile():
         return redirect("/")
 
     form = ProfileEditForm(obj=g.user)
-    
+
     if not User.authenticate(g.user.username, form.password.data):
         flash("Wrong password, try again", "danger")
 
@@ -311,8 +311,28 @@ def messages_destroy(message_id):
 
     return redirect(f"/users/{g.user.id}")
 
+@app.route('/messages/<int:message_id>/like', methods=["POST"])
+def like_unlike_message(message_id):
+    """Handle liking/unliking a message"""
+    if not g.user:
+        flash("Access unauthorized.", "danger")
+        return redirect("/")
+
+    msg = Message.query.get(message_id)
+    msg_like_by_ids = [user.id for user in msg.like_by]
+    if g.user.id not in msg_like_by_ids:
+        like = Like(user_id=g.user.id, message_id=message_id)
+        db.session.add(like)
+        db.session.commit()
+    else:
+        like = Like.query.filter(Like.user_id == g.user.id, Like.message_id == message_id)
+        db.session.delete(like)
+        db.session.commit()
+    return redirect()
+
 ##############################################################################
-#Route for Likes 
+# Route for Likes
+
 
 @app.route('/users/<int:user_id>/likes')
 def show_like_page(user_id):

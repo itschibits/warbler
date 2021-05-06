@@ -55,8 +55,10 @@
           <span class="text-muted">{{ msg.timestamp.strftime('%d %B %Y') }}</span>
           <p>{{ msg.text }}</p>
 
-          {% if g.user.id in msg.like_by%}
-          <form action="/messages/{{msg.id}}/like" method="POST" id="like_form">
+
+        </div>
+        {% if g.user.id in msg.like_by%}
+          <form formaction="/messages/{{msg.id}}/like" method="POST" id="like_form">
             {{ g.logout_form.hidden_tag() }}
 
             {% for field in g.logout_form if field.widget.input_type != 'hidden' %}
@@ -65,15 +67,11 @@
             {% endfor %}
             {{ field(placeholder=field.label.text, class="form-control") }}
             {% endfor %}
-            <span><i class="fas fa-heart"></i></span>
+            <button type="submit"><i class="fas fa-heart"></i></button>
             {% else %}
-            <span><i class="far fa-heart"></i></span>
-            {% endif %}
-            <button class="btn btn-primary btn-block">Log Out</button>
+            <button type="submit"><i class="far fa-heart"></i></button>
           </form>
-
-
-        </div>
+          {% endif %}
       </li>
       {% endfor %}
     </ul>
