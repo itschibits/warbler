@@ -6,7 +6,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy import or_
 
 from forms import UserAddForm, LoginForm, MessageForm, ProfileEditForm
-from forms import LogoutForm, LikeForm
+from forms import LogoutForm, LikeUnlikeForm, DeleteUserForm
 from models import db, connect_db, User, Message, Like
 
 CURR_USER_KEY = "curr_user"
@@ -44,6 +44,9 @@ def add_user_to_g():
 
 @app.before_request
 def add_logout_form_to_g():
+    """If we're logged in, add logout form to Flask global. Only logged in
+       users should be able to log out"""
+
     if CURR_USER_KEY in session:
         g.logout_form = LogoutForm()
 
@@ -154,11 +157,11 @@ def list_users():
 @app.route('/users/<int:user_id>')
 def users_show(user_id):
     """Show user profile."""
-    form = LikeForm()
+    form = LikeUnlikeForm()
     user = User.query.get_or_404(user_id)
     messages = user.messages
-    likes = Like.query.filter(Like.user_id == g.user.id).all()
-    like_message_ids = [like.message_id for like in likes]
+    likes = g.user.likes
+    like_message_ids = {like.message_id for like in likes}
 
     return render_template('users/show.html', user=user, messages=messages, form=form, like_message_ids=like_message_ids)
 
@@ -234,35 +237,30 @@ def profile():
        User.authenticate(g.user.username, form.password.data)):
         g.user.username = form.username.data
         g.user.email = form.email.data
-        if not form.image_url.data:
-            g.user.image_url = "/static/images/default-pic.png"
-        else:
-            g.user.image_url = form.image_url.data
-        if not form.header_image_url.data:
-            g.user.header_image_url = "/static/images/warbler-hero.jpg"
-        else:
-            g.user.header_image_url = form.header_image_url.data
+
+        g.user.image_url = form.image_url.data if form.image_url.data else User.default_image
+        g.user.header_image_url = form.header_image_url.data if form.header_image_url.data else User.default_header_image
 
         g.user.bio = form.bio.data
         g.user.location = form.location.data
         db.session.commit()
         return redirect(f"/users/{g.user.id}")
-# TODO ask about default images
     return render_template("users/edit.html", form=form)
 
 
 @app.route('/users/delete', methods=["POST"])
 def delete_user():
     """Delete user."""
-
     if not g.user:
         flash("Access unauthorized.", "danger")
         return redirect("/")
 
-    do_logout()
+    form = DeleteUserForm()
 
-    db.session.delete(g.user)
-    db.session.commit()
+    if form.validate_on_submit():
+        do_logout()
+        db.session.delete(g.user)
+        db.session.commit()
 
     return redirect("/signup")
 
@@ -294,12 +292,12 @@ def messages_add():
 
 
 @app.route('/messages/<int:message_id>', methods=["GET"])
-def messages_show(message_id):
+def message_show(message_id):
     """Show a message."""
-    form = LikeForm()
+    form = LikeUnlikeForm()
     message = Message.query.get(message_id)
-    likes = Like.query.filter(Like.user_id == g.user.id).all()
-    like_message_ids = [like.message_id for like in likes]
+    likes = g.user.likes
+    like_message_ids = {like.message_id for like in likes}
     return render_template('messages/show.html', message=message, like_message_ids=like_message_ids, form=form)
 
 
@@ -312,34 +310,40 @@ def messages_destroy(message_id):
         return redirect("/")
 
     msg = Message.query.get(message_id)
-    db.session.delete(msg)
-    db.session.commit()
+    if g.user.id == msg.user_id:
+        db.session.delete(msg)
+        db.session.commit()
 
     return redirect(f"/users/{g.user.id}")
 
 
 @app.route('/messages/<int:message_id>/like', methods=["POST"])
 def like_unlike_message(message_id):
-    """Handle liking/unliking a message"""
+    """Handle liking/unliking a message. Will attempt to redirect to
+       previous page. If this fails, redirects to home."""
     # flash('like button clicked')
     if not g.user:
         flash("Access unauthorized.", "danger")
         return redirect("/")
 
     msg = Message.query.get(message_id)
-    user_ids_who_like_message = [user.id for user in msg.like_by]
+    user_ids_who_like_message = [user.id for user in msg.liked_by_users]
 
     if g.user.id not in user_ids_who_like_message:
+        # can append instead of making a like
         like = Like(user_id=g.user.id, message_id=message_id)
         db.session.add(like)
         db.session.commit()
+        flash("You liked a message!", "success")
     else:
         like = Like.query.filter(Like.message_id == message_id, Like.user_id == g.user.id).one()
         print('ardvark:', like)
         db.session.delete(like)
         db.session.commit()
+        flash("You unliked a message :(", "success")
     # flash('like button clicked')
-    return redirect(request.referrer)
+
+    return redirect(request.referrer or '/')
 
 ##############################################################################
 # Route for Likes
@@ -351,15 +355,11 @@ def show_like_page(user_id):
     if not g.user:
         flash("Access unauthorized.", "danger")
         return redirect("/")
-    likes = Like.query.filter(Like.user_id == g.user.id).all()
-    like_message_ids = [like.message_id for like in likes]
-    form = LikeForm()
-    liked_messages = g.user.likes
+    likes = g.user.likes
+    like_message_ids = {like.message_id for like in likes}
+    form = LikeUnlikeForm()
+    liked_messages = g.user.messages_liked
     return render_template('home.html', messages=liked_messages, form=form, like_message_ids=like_message_ids)
-
-
-
-
 
 
 ##############################################################################
@@ -377,7 +377,7 @@ def homepage():
 
     if g.user:
         users_following = g.user.following
-        form = LikeForm()
+        form = LikeUnlikeForm()
         following_ids = [following.id for following in users_following]
         # print("following ids", following_ids)
         messages = (Message
@@ -387,11 +387,14 @@ def homepage():
                     .limit(100)
                     .all())
         # print("messages", messages)
-        likes = Like.query.filter(Like.user_id == g.user.id).all()
-        like_message_ids = [like.message_id for like in likes]
-        #msg.id == like.mesage_id
+        likes = g.user.likes
+        like_message_ids = {like.message_id for like in likes}
+        # msg.id == like.mesage_id
 
-        return render_template('home.html', messages=messages, form=form, like_message_ids=like_message_ids)
+        return render_template('home.html',
+                               messages=messages,
+                               form=form,
+                               like_message_ids=like_message_ids)
 
     else:
         return render_template('home-anon.html')

@@ -41,5 +41,9 @@ class LogoutForm(FlaskForm):
     """Protected Logout, purposefully blank"""
 
 
-class LikeForm(FlaskForm):
-    """Protected Logout, purposefully blank"""
+class DeleteUserForm(FlaskForm):
+    """Protected Delete User, purposefully blank"""
+
+
+class LikeUnlikeForm(FlaskForm):
+    """Protected Likes/Unlikes, purposefully blank"""

@@ -32,6 +32,10 @@ class User(db.Model):
 
     __tablename__ = 'users'
 
+    default_image = "/static/images/default-pic.png"
+
+    default_header_image = "/static/images/warbler-hero.jpg"
+
     id = db.Column(
         db.Integer,
         primary_key=True,
@@ -76,6 +80,8 @@ class User(db.Model):
 
     messages = db.relationship('Message', order_by='Message.timestamp.desc()')
 
+    likes = db.relationship('Like')
+
     followers = db.relationship(
         "User",
         secondary="follows",
@@ -90,9 +96,10 @@ class User(db.Model):
         secondaryjoin=(Follows.user_being_followed_id == id)
     )
     
-    likes = db.relationship("Message",
+    messages_liked = db.relationship("Message",
                                  secondary="likes",
-                                 backref="like_by")
+                                 backref="liked_by_users")
+
 
     def __repr__(self):
         return f"<User #{self.id}: {self.username}, {self.email}>"
@@ -178,9 +185,12 @@ class Message(db.Model):
 
     user = db.relationship('User')
 
+    likes = db.relationship('Like')
+
 
 class Like(db.Model):
-    """table for likes """
+    """table that connects users to the messages they like and messages to the
+       users that liked them"""
 
     __tablename__ = "likes"
 

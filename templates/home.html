@@ -41,24 +41,24 @@
       </div>
     </div>
   </aside>
-
+<!-- List of messages -->
   <div class="col-lg-6 col-md-8 col-sm-12">
     <ul class="list-group" id="messages">
       {% for msg in messages %}
       <li class="list-group-item">
         <a href="/messages/{{ msg.id }}" class="message-link" />
-        <a href="/users/{{ msg.user.id }}">
+        <a href="/users/{{ msg.user_id }}">
           <img src="{{ msg.user.image_url }}" alt="" class="timeline-image">
         </a>
         <div class="message-area">
-          <a href="/users/{{ msg.user.id }}">@{{ msg.user.username }}</a>
+          <a href="/users/{{ msg.user_id }}">@{{ msg.user.username }}</a>
           <span class="text-muted">{{ msg.timestamp.strftime('%d %B %Y') }}</span>
           <p>{{ msg.text }}</p>
 
-
         </div>
+        <!-- Likes Form -->
         {% if g.user.id %}
-        <form action="/messages/{{msg.id}}/like" method="POST" id="like_form" class="like_form">
+        <form action="/messages/{{msg.id}}/like" method="POST" class="like_form">
           {{ form.hidden_tag() }}
 
           {% for field in form if field.widget.input_type != 'hidden' %}
@@ -72,7 +72,7 @@
           {% elif msg.id in like_message_ids %}
             <button type="submit" class="btn btn-primary"><i class="fas fa-heart like_button"></i></button>
           {% else %}
-            <button type="submit" class="btn btn-primary"><i class="far fa-heart like_button"></i></button>
+            <button type="submit" class="btn btn-primary"><i class="far fa-heart unlike_button"></i></button>
           {% endif %}
         </form>
         {% endif %}

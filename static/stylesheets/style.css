@@ -385,7 +385,7 @@ p.card-bio {
 
 /* ============================ Likes */
 
-.like_button {
+.like_button, .unlike_button {
   position: relative;
   z-index: 1;
   border-style: none;
