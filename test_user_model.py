@@ -95,8 +95,7 @@ class UserModelTestCase(TestCase):
         self.assertFalse(self.user1.is_following(self.user2))
         self.assertTrue(self.user2.is_following(self.user1))
 
-        self.assertTrue(self.user1.is_followed_by(self.user2))
-        self.assertFalse(self.user2.is_followed_by(self.user1))
+        # TODO check length of followers
 
     def test_is_followed_by(self):
         """successfully detects when one user is followed by another user """
@@ -109,6 +108,7 @@ class UserModelTestCase(TestCase):
         self.assertFalse(self.user2.is_followed_by(self.user1))
     
     def test_User_signup(self):
+        """successfully detects if a unique user can create a new account"""
         # hashed_pwd = bcrypt.generate_password_hash("HASHED_PASSWORD").decode('UTF-8')
         new_user = User.signup(username="testuser", 
                                email="test@test.com", 
@@ -120,13 +120,34 @@ class UserModelTestCase(TestCase):
                                email="test@test.com", 
                                password="HASHED_PASSWORD",
                                image_url="")
-        
+
         with self.assertRaises(IntegrityError):
             db.session.commit()
         self.assertIsInstance(new_user, User)
-       
 
-        
+    def test_User_authenticate(self):
+        """successfully detects if an exisiting user can log into Warbler"""
+
+        new_user = User.signup(username="testuser", 
+                               email="test@test.com", 
+                               password="HASHED_PASSWORD",
+                               image_url="")
+        db.session.commit()
+
+        with self.assertRaises(ValueError):
+            User.authenticate(username="testuser1",
+                              password="BAD_TEST_PASSWORD")
+
+        self.assertFalse(User.authenticate(username="baduser",
+                                           password="TEST_PASSWORD"))
+ 
+        self.assertTrue(User.authenticate(username="testuser",
+                                          password="HASHED_PASSWORD"))
+
+
+
+
+
      
 
 

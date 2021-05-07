@@ -229,7 +229,7 @@ def profile():
         return redirect("/")
 
     form = ProfileEditForm(obj=g.user)
-
+    # TODO refactor so authenticate flash does not show up on showing profile edit page
     if not User.authenticate(g.user.username, form.password.data):
         flash("Wrong password, try again", "danger")
 

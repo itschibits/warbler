@@ -30,6 +30,7 @@ db.create_all()
 # Don't have WTForms use CSRF at all, since it's a pain to test
 
 app.config['WTF_CSRF_ENABLED'] = False
+app.config['DEBUG_TB_HOSTS'] = ['dont-show-debug-toolbar']
 
 
 class MessageViewTestCase(TestCase):
@@ -50,6 +51,11 @@ class MessageViewTestCase(TestCase):
 
         db.session.commit()
 
+
+    def tearDown(self):
+        """clean up any fouled transaction"""
+        db.session.rollback()
+
     def test_add_message(self):
         """Can use add a message?"""
 
@@ -64,9 +70,80 @@ class MessageViewTestCase(TestCase):
             # the rest of ours test
 
             resp = c.post("/messages/new", data={"text": "Hello"})
-
             # Make sure it redirects
             self.assertEqual(resp.status_code, 302)
 
             msg = Message.query.one()
             self.assertEqual(msg.text, "Hello")
+
+    def test_add_message_form(self):
+        """Does the add message form show up?"""
+
+        with self.client as c:
+            with c.session_transaction() as sess:
+                sess[CURR_USER_KEY] = self.testuser.id
+
+        resp = c.get("/messages/new")
+        html = resp.get_data(as_text=True)
+
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn("Testing add message form", html)
+
+    def test_add_message_invalid_user(self):
+        """Can the user look at the add message form if not logged in?"""
+        with self.client as c:
+            resp = c.get("/messages/new")
+            resp_redirect = c.get("/messages/new", follow_redirects=True)
+            html = resp_redirect.get_data(as_text=True)
+
+        self.assertEqual(resp.status_code, 302)
+        self.assertEqual(resp_redirect.status_code, 200)
+        self.assertIn("Testing homeanon", html)
+
+    def test_show_message(self):
+        with self.client as c:
+            with c.session_transaction() as sess:
+                sess[CURR_USER_KEY] = self.testuser.id
+
+        c.post("/messages/new", data={"text": "Hello"})   
+        msg = Message.query.one()
+        resp = c.get(f"/messages/{msg.id}")
+        html = resp.get_data(as_text=True)
+
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn("Testing show message", html)
+
+    def test_destroy_message(self):
+        with self.client as c:
+            with c.session_transaction() as sess:
+                sess[CURR_USER_KEY] = self.testuser.id
+        c.post("/messages/new", data={"text": "Hello"})   
+        msg = Message.query.one()
+        resp = c.post(f"/messages/{msg.id}/delete", follow_redirects=True)
+        html = resp.get_data(as_text=True)
+        user = User.query.get(self.testuser.id)
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn("Testing user profile", html)
+        self.assertEqual(len(user.messages), 0)
+
+    def test_bad_destroy_message(self):
+        with self.client as c:
+            with c.session_transaction() as sess:
+                sess[CURR_USER_KEY] = self.testuser.id
+        c.post("/messages/new", data={"text": "Hello"})   
+        msg = Message.query.one()
+        user = User.query.get(self.testuser.id)
+        self.assertEqual(len(user.messages), 1)
+        del sess[CURR_USER_KEY]
+        breakpoint()
+        resp = c.post(f"/messages/{msg.id}/delete", follow_redirects=True)
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(len(user.messages), 1)
+
+
+
+
+
+
+
+        

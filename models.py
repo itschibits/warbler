@@ -206,7 +206,7 @@ class Like(db.Model):
                     primary_key=True,
     )
 
-
+# TODO add like/unlike class method to refactor
 
 
 def connect_db(app):
