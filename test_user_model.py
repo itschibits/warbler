@@ -114,7 +114,6 @@ class UserModelTestCase(TestCase):
                                email="test@test.com", 
                                password="HASHED_PASSWORD",
                                image_url="")
-        db.session.add(new_user)
         db.session.commit()
 
         fail_new_user = User.signup(username="testuser", 
@@ -122,8 +121,12 @@ class UserModelTestCase(TestCase):
                                password="HASHED_PASSWORD",
                                image_url="")
         
+        with self.assertRaises(IntegrityError):
+            db.session.commit()
         self.assertIsInstance(new_user, User)
-        self.assertRaises(IntegrityError, fail_new_user)
+       
+
+        
      
 
 
