@@ -7,7 +7,7 @@
 
 import os
 from unittest import TestCase
-
+from sqlalchemy.exc import IntegrityError
 from models import db, User, Message, Follows
 
 # BEFORE we import our app, let's set an environmental variable
@@ -38,8 +38,32 @@ class UserModelTestCase(TestCase):
         Message.query.delete()
         Follows.query.delete()
 
+        user1 = User(
+            email="testemail@test.com",
+            username="testuser1",
+            password="TEST_PASSWORD"
+        )
+        user2 = User(
+            email="testemail2@test.com",
+            username="testuser2",
+            password="TEST_PASSWORD2"
+        )
+
+        db.session.add(user1)
+        db.session.add(user2)
+        db.session.commit()
+
+        self.user1 = user1
+        self.user1.id = user1.id
+        self.user2 = user2
+        self.user2.id = user2.id
+
         self.client = app.test_client()
 
+    def tearDown(self):
+        """clean up any fouled transaction"""
+        db.session.rollback()
+        
     def test_user_model(self):
         """Does basic model work?"""
 
@@ -55,3 +79,58 @@ class UserModelTestCase(TestCase):
         # User should have no messages & no followers
         self.assertEqual(len(u.messages), 0)
         self.assertEqual(len(u.followers), 0)
+
+    def test_repr_method(self):
+        """tests that repr method outputs correct information """
+
+        self.assertEqual(repr(self.user1), f"<User #{self.user1.id}: {self.user1.username}, {self.user1.email}>")
+
+    def test_is_following(self):
+        """successfully detects when one user is following another user """
+        user2_follows_user1 = Follows(user_being_followed_id=self.user1.id, 
+                                      user_following_id=self.user2.id)
+        db.session.add(user2_follows_user1)
+        db.session.commit()
+
+        self.assertFalse(self.user1.is_following(self.user2))
+        self.assertTrue(self.user2.is_following(self.user1))
+
+        self.assertTrue(self.user1.is_followed_by(self.user2))
+        self.assertFalse(self.user2.is_followed_by(self.user1))
+
+    def test_is_followed_by(self):
+        """successfully detects when one user is followed by another user """
+        user2_follows_user1 = Follows(user_being_followed_id=self.user1.id, 
+                                      user_following_id=self.user2.id)
+        db.session.add(user2_follows_user1)
+        db.session.commit()
+
+        self.assertTrue(self.user1.is_followed_by(self.user2))
+        self.assertFalse(self.user2.is_followed_by(self.user1))
+    
+    def test_User_signup(self):
+        # hashed_pwd = bcrypt.generate_password_hash("HASHED_PASSWORD").decode('UTF-8')
+        new_user = User.signup(username="testuser", 
+                               email="test@test.com", 
+                               password="HASHED_PASSWORD",
+                               image_url="")
+        db.session.add(new_user)
+        db.session.commit()
+
+        fail_new_user = User.signup(username="testuser", 
+                               email="test@test.com", 
+                               password="HASHED_PASSWORD",
+                               image_url="")
+        
+        self.assertIsInstance(new_user, User)
+        self.assertRaises(IntegrityError, fail_new_user)
+     
+
+
+
+
+
+    
+       
+
+
