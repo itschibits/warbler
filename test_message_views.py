@@ -7,7 +7,7 @@
 
 import os
 from unittest import TestCase
-
+from sqlalchemy.orm.exc import DetachedInstanceError
 from models import db, connect_db, Message, User
 
 # BEFORE we import our app, let's set an environmental variable
@@ -73,7 +73,7 @@ class MessageViewTestCase(TestCase):
             # Make sure it redirects
             self.assertEqual(resp.status_code, 302)
 
-            msg = Message.query.one()
+            msg = Message.query.one() 
             self.assertEqual(msg.text, "Hello")
 
     def test_add_message_form(self):
@@ -101,6 +101,7 @@ class MessageViewTestCase(TestCase):
         self.assertIn("Testing homeanon", html)
 
     def test_show_message(self):
+        """tests that a user can view a message """
         with self.client as c:
             with c.session_transaction() as sess:
                 sess[CURR_USER_KEY] = self.testuser.id
@@ -114,6 +115,7 @@ class MessageViewTestCase(TestCase):
         self.assertIn("Testing show message", html)
 
     def test_destroy_message(self):
+        """tests the user can delete own message and routes to correct place """
         with self.client as c:
             with c.session_transaction() as sess:
                 sess[CURR_USER_KEY] = self.testuser.id
@@ -122,11 +124,14 @@ class MessageViewTestCase(TestCase):
         resp = c.post(f"/messages/{msg.id}/delete", follow_redirects=True)
         html = resp.get_data(as_text=True)
         user = User.query.get(self.testuser.id)
+
         self.assertEqual(resp.status_code, 200)
         self.assertIn("Testing user profile", html)
         self.assertEqual(len(user.messages), 0)
 
     def test_bad_destroy_message(self):
+        """tests that a user can't delete a message if logged
+            or not their message """
         with self.client as c:
             with c.session_transaction() as sess:
                 sess[CURR_USER_KEY] = self.testuser.id
@@ -134,13 +139,45 @@ class MessageViewTestCase(TestCase):
         msg = Message.query.one()
         user = User.query.get(self.testuser.id)
         self.assertEqual(len(user.messages), 1)
+
         del sess[CURR_USER_KEY]
-        breakpoint()
-        resp = c.post(f"/messages/{msg.id}/delete", follow_redirects=True)
+
+        with self.assertRaises(DetachedInstanceError):
+            resp = c.post(f"/messages/{msg.id}/delete", follow_redirects=True)
+            self.assertEqual(len(user.messages), 1)
         self.assertEqual(resp.status_code, 200)
-        self.assertEqual(len(user.messages), 1)
+        
 
+    def test_message_like(self):
+        """ """
+        with self.client as c:
+            with c.session_transaction() as sess:
+                sess[CURR_USER_KEY] = self.testuser.id
+                
+        c.post("/messages/new", data={"text": "Hello"})
+        msg = Message.query.one()
+        resp = c.post(f'/messages/{msg.id}/like', data={"text": "Hello"})
 
+        self.assertEqual(resp.status_code, 302)
+
+    def test_bad_message_like(self):
+        """Tests if user is redirected to home if not logged in 
+        and attempting to like """
+
+        with self.client as c:
+            msg = Message(text="testing", user_id=self.testuser.id)
+            db.session.add(msg)
+            db.session.commit()
+            resp = c.post(f'/messages/{msg.id}/like', data={"text": "Hello"}, follow_redirects=True)
+
+        html = resp.get_data(as_text=True)
+        
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn("Testing homeanon", html)
+
+    #TODO add test for unlike route
+        
+        
 
 
 

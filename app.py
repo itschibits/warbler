@@ -13,6 +13,7 @@ CURR_USER_KEY = "curr_user"
 
 app = Flask(__name__)
 
+#TODO add url_for for routes
 # Get DB_URI from environ variable (useful for production/testing) or,
 # if not set there, use development local db.
 app.config['SQLALCHEMY_DATABASE_URI'] = (

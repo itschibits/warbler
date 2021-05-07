@@ -36,7 +36,7 @@ class ProfileEditForm(FlaskForm):
     bio = TextAreaField('(Optional) User Bio')
     password = PasswordField('Enter Your Password', validators=[Length(min=6)])
 
-
+#TODO create form html and include in html instead of copying. Make one CSRF form
 class LogoutForm(FlaskForm):
     """Protected Logout, purposefully blank"""
 
